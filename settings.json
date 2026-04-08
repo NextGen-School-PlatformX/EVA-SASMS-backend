@@ -1,0 +1,17 @@
+{
+  "branding": {
+    "logoUrl": "",
+    "primaryColor": "#FFC600",
+    "secondaryColor": "#000000"
+  },
+  "policies": {
+    "attendanceThreshold": 75,
+    "delinquencyLockDays": 30
+  },
+  "academicYear": "2024/2025",
+  "minAdmissionScore": 0,
+  "allowOnlineAdmissions": true,
+  "enableStudentFeed": true,
+  "smtpHost": "",
+  "smtpSender": ""
+}

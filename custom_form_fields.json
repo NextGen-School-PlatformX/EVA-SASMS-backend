@@ -1,0 +1,62 @@
+[
+  {
+    "id": "custom-1772454665338",
+    "label": "Gurdaian",
+    "type": "phone",
+    "required": false,
+    "placeholder": "",
+    "options": [],
+    "visibleToAdmin": true,
+    "order": 7
+  },
+  {
+    "id": "custom-1772464162712",
+    "label": "nbm",
+    "type": "text",
+    "required": true,
+    "placeholder": "",
+    "options": [],
+    "visibleToAdmin": true,
+    "order": 8
+  },
+  {
+    "id": "custom-1772464571055",
+    "label": "0scar177771@gmail.com",
+    "type": "file",
+    "required": true,
+    "placeholder": "",
+    "options": [],
+    "visibleToAdmin": true,
+    "order": 9
+  },
+  {
+    "id": "custom-1772465602062",
+    "label": "Sciences",
+    "type": "file",
+    "required": false,
+    "placeholder": "English Language",
+    "options": [],
+    "visibleToAdmin": true,
+    "order": 10
+  },
+  {
+    "id": "custom-1772466440179",
+    "label": "mki",
+    "type": "file",
+    "required": true,
+    "placeholder": "hey",
+    "options": [],
+    "visibleToAdmin": true,
+    "order": 11
+  },
+  {
+    "id": "custom-1772832595331",
+    "label": "kkk",
+    "type": "textarea",
+    "required": true,
+    "placeholder": "",
+    "options": [],
+    "visibleToAdmin": true,
+    "order": 11
+  }
+]

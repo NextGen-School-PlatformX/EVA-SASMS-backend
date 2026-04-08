@@ -1,0 +1,442 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id               String        @id @default(uuid())
+  email            String        @unique
+  password         String
+  name             String
+  role             String        // "SUPER_ADMIN", "ADMIN", "STUDENT", "APPLICANT"
+  status           String        @default("ACTIVE") // "ACTIVE", "INACTIVE", "PENDING"
+  nationalId       String?       @unique
+  phoneNumber      String?
+  avatarUrl        String?
+  
+  // Academic Placement (New Relational Structure)
+  academicYearId   String?
+  academicYear     AcademicYear? @relation(fields: [academicYearId], references: [id])
+  departmentId     String?
+  department       Department?   @relation("DepartmentUsers", fields: [departmentId], references: [id])
+  classId          String?
+  academicClass    AcademicClass? @relation(fields: [classId], references: [id])
+  
+  // Legacy fields (kept for migration buffer)
+  admissionYear    String?
+  studentClass     String?
+  
+  // Relations
+  application      Application?  @relation("ApplicantProfile")
+  staffProfile     Staff?        @relation("StaffUser")
+  reviewedApps     Application[] @relation("AdminReviewer")
+  supportTickets   SupportTicket[]
+  attendance       AttendanceRecord[]
+  eventEnrollments EventEnrollment[]
+  transactions     Transaction[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  decisionLogs     AdmissionDecisionLog[]
+  
+  address          String?
+  complaints       Complaint[]
+  activities       ActivityParticipant[]
+  feePayments      FeePayment[]
+  createdSessions  AttendanceSession[] @relation("SessionCreator")
+  employeeAttendance EmployeeAttendance[] @relation("EmployeeAttendance")
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model Application {
+  id                   String   @id @default(uuid())
+  status               String   @default("PENDING") // "PENDING", "UNDER_REVIEW", "EXAM_SCHEDULED", "INTERVIEW_SCHEDULED", "ACCEPTED", "REJECTED"
+  applicantId          String   @unique
+  applicant            User     @relation("ApplicantProfile", fields: [applicantId], references: [id])
+  nationalId           String?
+  
+  // Mandatory Documents
+  birthCertificateUrl  String?
+  idCardUrl            String?
+  ministryResultUrl    String?  // Ministry of Education portal result
+  receiptUrl           String?  // Instapay/Payment receipt (250 EGP)
+  otherDocsUrls        String?  // JSON stringified array
+  customFieldsData     String?  // JSON stringified object of extra dynamic text/number/select fields
+  
+  // Department Selection
+  preferredDeptId      String?
+  preferredDept        Department? @relation("PreferredDepartment", fields: [preferredDeptId], references: [id])
+  selectionReason      String?
+  
+  ministryScore        Float?    // Ministry Exam Result Score
+  
+  // Exam Scheduling
+  examDate             String?
+  examLocation         String?
+  examNotes            String?
+  
+  // Interview Scheduling
+  interviewDate        String?
+  interviewLocation    String?
+  interviewNotes       String?
+  
+  // Exam Results (Admin fills after exam)
+  examScore            Float?
+  examNote             String?
+  
+  // Interview Results
+  interviewScore       Float?
+  interviewNote        String?
+  interviewCriteria    String?
+  
+  feedback             String?
+  reviewerId           String?
+  reviewer             User?    @relation("AdminReviewer", fields: [reviewerId], references: [id])
+  
+  submittedAt          DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  decisionLogs         AdmissionDecisionLog[]
+}
+
+model AcademicYear {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g., "Junior", "Wheeler", "Senior"
+  isActive    Boolean  @default(true)
+  departments Department[]
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  icon        String?  // MUI icon name or SVG path
+  headId      String?
+  
+  // Hierarchy
+  yearId      String?
+  year        AcademicYear? @relation(fields: [yearId], references: [id])
+  classes     AcademicClass[]
+  
+  users       User[]   @relation("DepartmentUsers")
+  preferredByApplications Application[] @relation("PreferredDepartment")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, yearId])
+}
+model AcademicClass {
+  id           String   @id @default(uuid())
+  name         String   // e.g., "Class A", "CS-101"
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  users        User[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AttendanceRecord {
+  id               String            @id @default(uuid())
+  studentId        String
+  student          User              @relation(fields: [studentId], references: [id])
+  sessionId        String
+  session          AttendanceSession @relation(fields: [sessionId], references: [id])
+  scannedAt        DateTime?         // Nullable for ABSENT records
+  studentLatitude  Float?
+  studentLongitude Float?
+  distance         Float?
+  status           String            // "PRESENT", "ABSENT", "LATE"
+  createdAt        DateTime          @default(now())
+
+  @@index([studentId])
+  @@index([sessionId])
+  @@unique([studentId, sessionId])
+}
+
+model EventEnrollment {
+  id         String   @id @default(uuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  enrolledAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model Staff {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation("StaffUser", fields: [userId], references: [id])
+  position        String   // e.g., "Math Teacher", "Principal"
+  bio             String?
+  isTeacher       Boolean  @default(false)
+  rating          Float    @default(0.0)
+  isStaffOfMonth  Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  details   String?  // JSON stringified
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model FeeCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  amount      Float
+  description String?
+  transactions Transaction[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  amount        Float
+  status        String   @default("PENDING") // "PENDING", "COMPLETED", "FAILED"
+  type          String   // "PAYMENT", "REFUND"
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  feeCategoryId String?
+  feeCategory   FeeCategory? @relation(fields: [feeCategoryId], references: [id])
+  paymentMethod String?
+  reference     String?  // e.g. receipt URL or bank ref
+  createdAt     DateTime @default(now())
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  subject     String
+  category    String
+  status      String   @default("OPEN") // "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"
+  applicantId String
+  applicant   User     @relation(fields: [applicantId], references: [id])
+  messages    SupportMessage[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SupportMessage {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id])
+  senderId  String
+  content   String
+  role      String   // "USER", "STAFF"
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model SchoolInfo {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  logoUrl       String?
+  heroTitle     String?
+  heroSubtitle  String?
+  email         String?
+  phone         String?
+  address       String?
+  
+  minAdmissionScore Float @default(0)
+  
+  updatedAt     DateTime @updatedAt
+}
+
+model Event {
+  id             String   @id @default(uuid())
+  title          String
+  date           String
+  category       String
+  organizer      String
+  attendeesCount Int      @default(0)
+  location       String?
+  capacity       Int      @default(100)
+  status         String   @default("Upcoming")
+  
+  enrollments    EventEnrollment[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  text        String
+  type        String   @default("info")   // "info", "warning", "success", "error"
+  read        Boolean  @default(false)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  targetRole  String?  // "STUDENT", "APPLICANT", "STAFF", "ADMIN" (for broadcast)
+  link        String?
+  createdAt   DateTime @default(now())
+}
+model AdmissionDecisionLog {
+  id              String      @id @default(uuid())
+  applicationId   String
+  application     Application @relation(fields: [applicationId], references: [id])
+  adminId         String
+  admin           User        @relation(fields: [adminId], references: [id])
+  statusAfter     String      // "UNDER_REVIEW", "ACCEPTED", "REJECTED"
+  notes           String?
+  createdAt       DateTime    @default(now())
+}
+
+model Fee {
+  id            String       @id @default(uuid())
+  title         String
+  description   String
+  amount        Float
+  dueDate       DateTime
+  attachmentUrl String?
+  payments      FeePayment[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model FeePayment {
+  id        String    @id @default(uuid())
+  feeId     String
+  fee       Fee       @relation(fields: [feeId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  status    String    @default("UNPAID") // "UNPAID", "PENDING", "APPROVED", "REJECTED"
+  amountPaid Float?
+  receiptImage String?
+  adminNote String?
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([feeId, userId])
+}
+
+model AttendanceSession {
+  id          String             @id @default(uuid())
+  title       String
+  latitude    Float
+  longitude   Float
+  radius      Float              // Allowed radius in meters
+  startTime   DateTime
+  endTime     DateTime
+  lateAfter   DateTime?
+  createdBy   String
+  admin       User               @relation("SessionCreator", fields: [createdBy], references: [id])
+  records     AttendanceRecord[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model Complaint {
+  id          String             @id @default(uuid())
+  subject     String
+  status      String             @default("OPEN") // "OPEN", "CLOSED"
+  studentId   String
+  student     User               @relation(fields: [studentId], references: [id])
+  messages    ComplaintMessage[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model ComplaintMessage {
+  id          String    @id @default(uuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  senderId    String
+  content     String
+  role        String    // "STUDENT", "ADMIN"
+  createdAt   DateTime  @default(now())
+}
+
+model Activity {
+  id          String                @id @default(uuid())
+  title       String
+  description String
+  date        DateTime
+  participants ActivityParticipant[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+}
+
+model ActivityParticipant {
+  id          String   @id @default(uuid())
+  activityId  String
+  activity    Activity @relation(fields: [activityId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  joinedAt    DateTime @default(now())
+
+  @@unique([activityId, userId])
+}
+
+// ── Employee Attendance System ──────────────────────────────────────────
+model EmployeeAttendance {
+  id             String   @id @default(uuid())
+  employeeId     String
+  employee       User     @relation("EmployeeAttendance", fields: [employeeId], references: [id])
+  date           String   // YYYY-MM-DD
+  checkInTime    DateTime?
+  checkOutTime   DateTime?
+  status         String   @default("ABSENT") // "Present" | "Late" | "Absent"
+  overtimeHours  Float    @default(0)
+  createdAt      DateTime @default(now())
+
+  @@unique([employeeId, date])
+  @@index([employeeId])
+  @@index([date])
+}
+
+model AttendanceSettings {
+  id              Int    @id @default(1)
+  checkInOpen     String @default("07:00")
+  lateAfter       String @default("08:15")
+  checkOutTime    String @default("16:00")
+  overtimeRate    Float  @default(50)
+  lockLate        Boolean @default(false)
+  updatedAt       DateTime @updatedAt
+}
+
+model WeeklySchedule {
+  id        Int     @id @default(1)
+  monday    Boolean @default(true)
+  tuesday   Boolean @default(true)
+  wednesday Boolean @default(true)
+  thursday  Boolean @default(true)
+  friday    Boolean @default(true)
+  saturday  Boolean @default(false)
+  sunday    Boolean @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model PublicHoliday {
+  id        String   @id @default(uuid())
+  date      String   // YYYY-MM-DD
+  name      String
+  createdAt DateTime @default(now())
+
+  @@unique([date])
+}
