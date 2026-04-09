@@ -171,17 +171,18 @@ UPLOAD_DIR="./uploads"
 
 ---
 
-## 🔑 Default Master Credentials
+## 🔑 Seeded Test Credentials
 
-After running `npm run seed`, the SuperAdmin account is initialized:
+After running `npm run seed`, the following accounts are ready to use across all roles:
 
-```
-Email   : admin.super@sasms.edu
-Password: 123456
-Role    : SUPER_ADMIN
-```
+| Role | Email | Password |
+|------|-------|----------|
+| 👑 **SuperAdmin** | `0scar177771@gmail.com` | `Felopater` |
+| 🏛️ **Admin** | `admin.senior@sasms.edu` | `Felopater` |
+| 🎓 **Student** | `student.youssef@sasms.edu` | `Felopater` |
+| 📋 **Applicant** | `applicant.dina@gmail.com` | `Felopater` |
 
-> ⚠️ **Change these immediately in any production deployment.**
+> ⚠️ **Change all credentials immediately in any production deployment.**
 
 ---
 
